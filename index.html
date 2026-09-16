@@ -194,7 +194,7 @@
             const gasUrl = 'https://script.google.com/macros/s/AKfycbygkyngE_dTXB1mwHkCWMEDVRFhEPO07j0TsKS1ESRpn42gjQQU2IkEVST7fJb0gey_Zg/exec';
             const [submitStatus, setSubmitStatus] = useState('idle');
             const [pdfStatus, setPdfStatus] = useState('');
-            const [language, setLanguage] = useState('ms');
+            const [language] = useState('ms');
             
             const [currentExaminer, setCurrentExaminer] = useState('');
 
@@ -606,7 +606,6 @@
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                 <span className="text-2xl font-black bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent drop-shadow-sm whitespace-nowrap">{language === 'en' ? 'Alexandra Primary 5 Malay Language Oral Assessment (2026)' : 'Alexandra Pemarkahan Lisan Bahasa Melayu Darjah 5 (2026)'}</span>
                                 
-                                <button onClick={() => setLanguage(language === 'en' ? 'ms' : 'en')} className="px-4 py-1.5 rounded-lg font-bold text-sm bg-amber-50 border border-amber-200 text-amber-800 shadow-sm">🌐 {language === 'en' ? 'Translate to Malay' : 'Tukar ke English'}</button>
                                 <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
                                     <button
                                         onClick={() => handleSyllabusChange('standard')}
