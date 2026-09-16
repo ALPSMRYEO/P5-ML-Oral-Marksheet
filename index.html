@@ -300,34 +300,71 @@
             const handleSavePDF = async () => {
                 const element = document.querySelector('.print-container');
                 if (!element) return;
-                const fileName = student.name ? `${student.class}_${student.name}_Oral_Feedback.pdf` : `Oral_Feedback_${student.class || 'Class'}.pdf`;
+
+                const fileName = student.name
+                    ? `${student.class}_${student.name}_Oral_Feedback.pdf`
+                    : `Oral_Feedback_${student.class || 'Class'}.pdf`;
+
                 const previousDisplay = element.style.display;
                 const previousWidth = element.style.width;
-                element.style.display = 'block';
+                element.style.display = 'flex';
                 element.style.width = '190mm';
-                const options = { margin:[10,10,10,10], filename:fileName, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}, pagebreak:{mode:['avoid-all','css','legacy']} };
+
+                const options = {
+                    margin: [10,10,10,10],
+                    filename: fileName,
+                    image: { type:'jpeg', quality:0.98 },
+                    html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
+                    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+                    pagebreak: { mode:['avoid-all','css','legacy'] }
+                };
+
                 try {
                     setPdfStatus(language === 'en' ? 'Generating PDF…' : 'Sedang menjana PDF…');
-                    // Open a blank tab immediately from the user's click so popup blockers do not treat it as an automatic popup.
-                    const pdfWindow = window.open('', '_blank');
-                    if (!pdfWindow) {
-                        setDialog({isOpen:true,title: language === 'en' ? 'Pop-up Blocked' : 'Pop-up Disekat',message: language === 'en' ? 'Please allow pop-ups for this app, then click Save PDF again.' : 'Sila benarkan pop-up untuk aplikasi ini, kemudian klik Simpan PDF sekali lagi.',type:'alert'});
-                        return;
-                    }
-                    pdfWindow.document.write(`<html><head><title>${fileName}</title></head><body style="font-family:Arial,sans-serif;padding:24px">${language === 'en' ? 'Generating PDF…' : 'Sedang menjana PDF…'}</body></html>`);
-
                     const worker = html2pdf().set(options).from(element).toPdf();
                     const pdfBlob = await worker.outputPdf('blob');
-                    const url = URL.createObjectURL(pdfBlob);
-                    pdfWindow.location.replace(url);
-                    setPdfStatus(language === 'en' ? '✓ PDF opened — use the Save icon' : '✓ PDF dibuka — gunakan ikon Simpan');
-                    // Keep the object URL alive long enough for the browser PDF viewer to load and save it.
-                    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
-                    setTimeout(() => setPdfStatus(''),2500);
+
+                    if ('showSaveFilePicker' in window) {
+                        try {
+                            const fileHandle = await window.showSaveFilePicker({
+                                suggestedName: fileName,
+                                types: [{
+                                    description: 'PDF Document',
+                                    accept: { 'application/pdf': ['.pdf'] }
+                                }]
+                            });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(pdfBlob);
+                            await writable.close();
+                            setPdfStatus(language === 'en' ? '✓ PDF saved' : '✓ PDF berjaya disimpan');
+                            setTimeout(() => setPdfStatus(''), 2500);
+                        } catch (saveError) {
+                            if (saveError && saveError.name !== 'AbortError') throw saveError;
+                            setPdfStatus('');
+                        }
+                    } else {
+                        setPdfStatus('');
+                        setDialog({
+                            isOpen:true,
+                            title: language === 'en' ? 'Save As Not Available' : 'Simpan Sebagai Tidak Tersedia',
+                            message: language === 'en'
+                                ? 'This browser does not support the Save As window used by this app. Please open the app in Chrome or Edge.'
+                                : 'Pelayar ini tidak menyokong tetingkap Simpan Sebagai yang digunakan oleh aplikasi ini. Sila buka aplikasi dalam Chrome atau Edge.',
+                            type:'alert'
+                        });
+                    }
                 } catch(error) {
                     console.error('PDF save error:',error);
-                    setDialog({isOpen:true,title: language === 'en' ? 'Unable to Save PDF' : 'Tidak Dapat Menyimpan PDF',message: language === 'en' ? 'The PDF could not be generated. Please try again.' : 'PDF tidak dapat dijana. Sila cuba lagi.',type:'alert'});
-                } finally { element.style.display=previousDisplay; element.style.width=previousWidth; }
+                    setDialog({
+                        isOpen:true,
+                        title: language === 'en' ? 'Unable to Save PDF' : 'Tidak Dapat Menyimpan PDF',
+                        message: language === 'en' ? 'The PDF could not be saved. Please try again.' : 'PDF tidak dapat disimpan. Sila cuba lagi.',
+                        type:'alert'
+                    });
+                } finally {
+                    element.style.display = previousDisplay;
+                    element.style.width = previousWidth;
+                }
             };
 
             const availableClasses = useMemo(() => {
