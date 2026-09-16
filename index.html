@@ -1,13 +1,761 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>P5 Bahasa Melayu / Bahasa Melayu Asas Oral Assessment</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.card{background:#fff;width:min(680px,90vw);padding:48px;border-radius:24px;box-shadow:0 18px 50px rgba(15,23,42,.12);text-align:center}
-h1{margin:0 0 12px;color:#0f172a;font-size:32px}p{color:#475569;font-size:18px;line-height:1.6}
-a{display:inline-block;margin-top:20px;padding:16px 28px;border-radius:14px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:18px}
-</style></head>
-<body><div class="card"><h1>Alexandra Primary School</h1><p>Primary 5 Bahasa Melayu / Bahasa Melayu Asas Oral Assessment</p>
-<a href="P5_ML_Oral_Assessment_Direct_Save_PDF_No_Popup.html">Buka Sistem Penilaian Lisan</a></div></body></html>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alexandra Pemarkahan Lisan Bahasa Melayu Darjah 5 (2026)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- html2pdf.js: generate a real PDF without opening the browser print page -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        @media print {
+            body { background-color: white; font-size: 14pt; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .print-container {
+                border: 2px solid #3b82f6;
+                border-radius: 16px;
+                padding: 50px;
+                margin: 20px;
+                box-shadow: none;
+            }
+        }
+        .print-only { display: none; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fefce8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #fde047;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #facc15;
+        }
+    </style>
+</head>
+<body class="bg-yellow-50 text-slate-900 font-sans min-h-screen pb-24 text-base">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const rubricsData = {
+            // Bahasa Melayu Standard
+            standard: {
+                readingPron: {
+                    title: "Sebutan & Kejelasan",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Sebutan sentiasa baik dan jelas", feedback: "Sebutan kamu sentiasa baik dan jelas. Tahniah!" },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Sebutan jelas tetapi terdapat sedikit kesilapan", feedback: "Sebutan kamu jelas walaupun terdapat sedikit kesilapan. Teruskan usaha!" },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Pada umumnya, sebutan jelas tetapi terdapat banyak kesilapan", feedback: "Pada umumnya, sebutan kamu jelas tetapi masih ada beberapa kesilapan yang perlu diperbaiki." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Sebutan agak sukar difahami dan terdapat banyak kesilapan yang ketara", feedback: "Sebutan kamu agak sukar difahami pada sesetengah bahagian. Banyakkan latihan membaca dengan lantang." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Sebutan tidak jelas dan kebanyakan perkataan disalah sebut", feedback: "Terdapat banyak perkataan yang disalah sebut. Jangan putus asa, cikgu akan bimbing kamu!" }
+                    ]
+                },
+                readingFluency: {
+                    title: "Kelancaran & Gaya",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Bacaan amat lancar; jeda dan rentak sesuai dan tidak teragak-agak; variasi nada sesuai", feedback: "Bacaan kamu amat lancar dengan jeda dan nada yang sangat sesuai seperti pencerita yang hebat." },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Bacaan lancar; pada umumnya, jeda dan rentak sesuai dan hampir tidak teragak-agak; variasi nada sesuai", feedback: "Bacaan kamu lancar dan hampir tidak teragak-agak dengan variasi nada yang sesuai." },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Pada umumnya, bacaan lancar; jeda dan rentak sesuai tetapi teragak-agak sedikit; variasi nada memuaskan", feedback: "Bacaan kamu memuaskan walaupun terdapat sedikit keraguan. Cuba baca dengan lebih yakin." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Pada umumnya, bacaan teragak-agak; jeda dan rentak tidak sesuai; terdapat sedikit variasi nada", feedback: "Bacaan kamu agak teragak-agak dan jeda kurang sesuai. Kita akan berlatih lagi untuk membina keyakinan." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Bacaan teragak-agak dan banyak perkataan tidak dibaca; jeda dan rentak tidak sesuai; tiada variasi nada", feedback: "Bacaan masih kurang lancar dan banyak jeda yang tidak sesuai. Teruskan berusaha dengan membaca satu persatu." }
+                    ]
+                },
+                convResponse: {
+                    title: "Respons Peribadi & Pengembangan Idea",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Memerlukan bantuan yang minimal; mampu memberikan respons komprehensif berserta pengembangan yang cukup; melibatkan diri dalam perbualan dan bertukar-tukar idea secara konsisten", feedback: "Kamu mampu memberikan respons yang komprehensif dengan pengembangan idea yang sangat baik dan tersusun." },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Sekali-sekala memerlukan bantuan; mampu memberikan respons yang komprehensif berserta sedikit pengembangan; kebanyakan masa melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Idea yang disampaikan bernas dan komprehensif. Syabas atas usaha kamu!" },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Sering memerlukan bantuan; mampu memberikan respons yang cukup berserta sedikit pengembangan; sekali-sekala melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Kamu dapat memberi respons dengan sedikit bantuan cikgu. Cuba lebih berani menyuarakan pendapat peribadi." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Sentiasa memerlukan bantuan; mampu memberikan sedikit respons tanpa pengembangan; hampir tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Kamu memberi sedikit respons dengan bimbingan cikgu. Cuba kembangkan idea kamu dalam perbualan akan datang." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Sentiasa memerlukan bantuan; hampir tidak mampu memberikan respons; tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Perbualan ini mungkin agak mencabar buat kamu. Tidak mengapa, kita akan berlatih berbual mengenai topik harian." }
+                    ]
+                },
+                convLanguage: {
+                    title: "Penggunaan Bahasa & Kelancaran",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Menggunakan pelbagai kosa kata yang sesuai; mampu bertutur dengan lancar dan jelas", feedback: "Penggunaan kosa kata yang pelbagai dan gaya perbualan kamu sungguh meyakinkan dan sangat lancar!" },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Kebanyakan masa menggunakan kosa kata yang sesuai; pada umumnya mampu bertutur dengan lancar dan jelas", feedback: "Kosa kata yang digunakan amat sesuai dan perbualan kamu lancar secara keseluruhannya." },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Menggunakan kosa kata asas yang kadangkala tidak sesuai; pada umumnya mampu bertutur dengan lancar dan jelas tetapi menggunakan pernyataan yang mudah-mudah", feedback: "Kamu mampu menggunakan kosa kata asas dan membina ayat yang mudah dan difahami." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Kebanyakan masa menggunakan kosa kata asas yang tidak sesuai; tidak mampu bertutur dengan jelas; teragak-agak sedikit ketika bertutur", feedback: "Kelancaran dan kejelasan bahasa perlu ditingkatkan lagi. Banyakkan berbual dalam Bahasa Melayu bersama rakan." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Menggunakan kosa kata asas yang amat terbatas hampir pada setiap masa; tidak mampu bertutur dengan jelas; teragak-agak ketika bertutur; berjeda agak lama di tempat yang tidak sesuai beberapa kali", feedback: "Oleh kerana kosa kata agak terhad, perbualan sering terhenti. Rajin membaca untuk menambah perbendaharaan kata." }
+                    ]
+                }
+            },
+            // Bahasa Melayu Asas
+            foundation: {
+                readingPron: {
+                    title: "Sebutan & Kejelasan",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Sebutan sentiasa baik dan jelas", feedback: "Sebutan kamu sentiasa baik dan jelas. Tahniah!" },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Sebutan jelas tetapi terdapat sedikit kesilapan", feedback: "Sebutan kamu jelas walaupun terdapat sedikit kesilapan. Teruskan usaha!" },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Pada umumnya, sebutan jelas tetapi terdapat banyak kesilapan", feedback: "Pada umumnya, sebutan kamu jelas tetapi masih ada beberapa kesilapan yang perlu diperbaiki." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Sebutan agak sukar difahami dan terdapat banyak kesilapan yang ketara", feedback: "Sebutan kamu agak sukar difahami pada sesetengah bahagian. Banyakkan latihan membaca dengan lantang." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Sebutan tidak jelas dan kebanyakan perkataan disalah sebut", feedback: "Terdapat banyak perkataan yang disalah sebut. Jangan putus asa, cikgu akan bimbing kamu!" }
+                    ]
+                },
+                readingFluency: {
+                    title: "Kelancaran & Gaya",
+                    max: 15,
+                    items: [
+                        { level: 1, scores: [13, 14, 15], label: "Jalur 1", desc: "Bacaan amat lancar; jeda dan rentak sesuai dan tidak teragak-agak; variasi nada sesuai", feedback: "Bacaan kamu amat lancar dengan jeda dan nada yang sangat sesuai." },
+                        { level: 2, scores: [10, 11, 12], label: "Jalur 2", desc: "Bacaan lancar; pada umumnya, jeda dan rentak sesuai dan hampir tidak teragak-agak; variasi nada sesuai", feedback: "Bacaan kamu lancar dan hampir tidak teragak-agak dengan variasi nada yang sesuai." },
+                        { level: 3, scores: [7, 8, 9], label: "Jalur 3", desc: "Pada umumnya, bacaan lancar; jeda dan rentak sesuai tetapi teragak-agak sedikit; variasi nada memuaskan", feedback: "Bacaan kamu memuaskan walaupun terdapat sedikit keraguan. Cuba baca dengan lebih yakin." },
+                        { level: 4, scores: [4, 5, 6], label: "Jalur 4", desc: "Pada umumnya, bacaan teragak-agak; jeda dan rentak tidak sesuai; terdapat sedikit variasi nada", feedback: "Bacaan kamu agak teragak-agak dan jeda kurang sesuai. Kita akan berlatih lagi untuk membina keyakinan." },
+                        { level: 5, scores: [1, 2, 3], label: "Jalur 5", desc: "Bacaan teragak-agak dan banyak perkataan tidak dibaca; jeda dan rentak amat tidak sesuai; tiada variasi nada", feedback: "Bacaan masih kurang lancar dan rentak amat tidak sesuai. Teruskan berusaha dengan membaca satu persatu." }
+                    ]
+                },
+                convResponse: {
+                    title: "Respons Peribadi & Pengembangan Idea",
+                    max: 20,
+                    items: [
+                        { level: 1, scores: [17, 18, 19, 20], label: "Jalur 1", desc: "Memerlukan bantuan yang minimal; mampu memberikan respons komprehensif berserta pengembangan yang cukup; melibatkan diri dalam perbualan dan bertukar-tukar idea secara konsisten", feedback: "Kamu mampu memberikan respons yang komprehensif dengan pengembangan idea yang sangat baik dan tersusun." },
+                        { level: 2, scores: [13, 14, 15, 16], label: "Jalur 2", desc: "Sekali-sekala memerlukan bantuan; mampu memberikan respons yang komprehensif berserta sedikit pengembangan; kebanyakan masa melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Idea yang disampaikan bernas dan komprehensif. Syabas atas usaha kamu!" },
+                        { level: 3, scores: [9, 10, 11, 12], label: "Jalur 3", desc: "Sering memerlukan bantuan; mampu memberikan respons yang cukup berserta sedikit pengembangan; sekali-sekala melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Kamu dapat memberi respons dengan sedikit bantuan cikgu. Cuba lebih berani menyuarakan pendapat peribadi." },
+                        { level: 4, scores: [5, 6, 7, 8], label: "Jalur 4", desc: "Sentiasa memerlukan bantuan; mampu memberikan sedikit respons tanpa pengembangan; hampir tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Kamu memberi sedikit respons dengan bimbingan cikgu. Cuba kembangkan idea kamu dalam perbualan akan datang." },
+                        { level: 5, scores: [1, 2, 3, 4], label: "Jalur 5", desc: "Sentiasa memerlukan bantuan; hampir tidak mampu memberikan respons; tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea", feedback: "Perbualan ini mungkin agak mencabar buat kamu. Tidak mengapa, kita akan berlatih berbual mengenai topik harian." }
+                    ]
+                },
+                convLanguage: {
+                    title: "Penggunaan Bahasa & Kelancaran",
+                    max: 20,
+                    items: [
+                        { level: 1, scores: [17, 18, 19, 20], label: "Jalur 1", desc: "Menggunakan pelbagai kosa kata yang sesuai; mampu bertutur dengan lancar dan jelas", feedback: "Penggunaan kosa kata yang pelbagai dan gaya perbualan kamu sungguh meyakinkan dan sangat lancar!" },
+                        { level: 2, scores: [13, 14, 15, 16], label: "Jalur 2", desc: "Kebanyakan masa menggunakan kosa kata yang sesuai; pada umumnya mampu bertutur dengan lancar dan jelas", feedback: "Kosa kata yang digunakan amat sesuai dan perbualan kamu lancar secara keseluruhannya." },
+                        { level: 3, scores: [9, 10, 11, 12], label: "Jalur 3", desc: "Menggunakan kosa kata asas yang kadangkala tidak sesuai; pada umumnya mampu bertutur dengan lancar dan jelas tetapi menggunakan pernyataan yang mudah-mudah-mudah", feedback: "Kamu mampu menggunakan kosa kata asas dan membina ayat yang mudah dan difahami." },
+                        { level: 4, scores: [5, 6, 7, 8], label: "Jalur 4", desc: "Kebanyakan masa menggunakan kosa kata asas yang tidak sesuai; tidak mampu bertutur dengan jelas; teragak-agak sedikit ketika bertutur", feedback: "Kelancaran dan kejelasan bahasa perlu ditingkatkan lagi. Banyakkan berbual dalam Bahasa Melayu bersama rakan." },
+                        { level: 5, scores: [1, 2, 3, 4], label: "Jalur 5", desc: "Menggunakan kosa kata asas yang amat terbatas hampir pada setiap masa; tidak mampu bertutur dengan jelas; teragak-agak ketika bertutur; berjeda agak lama di tempat yang tidak sesuai beberapa kali", feedback: "Oleh kerana kosa kata agak terhad, perbualan sering terhenti. Rajin membaca untuk menambah perbendaharaan kata." }
+                    ]
+                }
+            }
+        };
+
+        const examinersList = ['Dewi', 'Hakimah', 'Nur Amirah'];
+
+        const defaultRoster = [
+            // Bahasa Melayu Standard (10 Students)
+            { class: 'P5-C', mtl: 'ML', name: 'MUHAMMAD AYDIIN SHAZLEEY BIN ABDULLAH', subjectType: 'standard' },
+            { class: 'P5-C', mtl: 'ML', name: 'PUTERI NUR JASMIN BINTE NOR ISKANDAR', subjectType: 'standard' },
+            { class: 'P5-E', mtl: 'ML', name: 'ARCHILLES TROY SINGH', subjectType: 'standard' },
+            { class: 'P5-E', mtl: 'ML', name: 'MOHAMED ADAM ARBAAZ BIN MOHAMED HISHAMMUDEEN', subjectType: 'standard' },
+            { class: 'P5-H', mtl: 'ML', name: 'IDEN LEE IMRAN', subjectType: 'standard' },
+            { class: 'P5-H', mtl: 'ML', name: 'RIVER TWAIN DAIMWOOD', subjectType: 'standard' },
+            { class: 'P5-O', mtl: 'ML', name: 'MOHAMMAD IRZAN BIN MOHAMMAD NAZRI', subjectType: 'standard' },
+            { class: 'P5-O', mtl: 'ML', name: 'MUHAMMAD HAFEEZ FEROZ BIN ABDULLAH', subjectType: 'standard' },
+            { class: 'P5-O', mtl: 'ML', name: 'NUR AUNI SARAH BINTE MUHAMMAD DARWISY', subjectType: 'standard' },
+            { class: 'P5-RS', mtl: 'ML', name: 'MOHAMMAD SUFIE BIN MOHAMMAD SUFFIAN', subjectType: 'standard' },
+
+            // Bahasa Melayu Asas (3 Students)
+            { class: 'P5-C', mtl: 'FML', name: 'NAUFAL AYDEN BIN MUHAMMAD HEIRY', subjectType: 'foundation' },
+            { class: 'P5-C', mtl: 'FML', name: 'SUFFI ISSYAQQILLATRI IZZAYU BINTE MUHAMMAD SUHAIMI', subjectType: 'foundation' },
+            { class: 'P5-O', mtl: 'FML', name: 'ZULFI AMZI BIN ABDULLAH', subjectType: 'foundation' }
+        ];
+
+        const App = () => {
+            const [syllabus, setSyllabus] = useState('standard'); 
+            const [student, setStudent] = useState({ class: '', name: '', mtl: '' });
+            const [scores, setScores] = useState({ readingPron: 0, readingFluency: 0, convResponse: 0, convLanguage: 0 });
+            const [selections, setSelections] = useState({ readingPron: null, readingFluency: null, convResponse: null, convLanguage: null });
+            
+            const [feedbackText, setFeedbackText] = useState('');
+            const [lastAutoText, setLastAutoText] = useState('');
+
+            // Updated Google Apps Script Web App URL
+            const gasUrl = 'https://script.google.com/macros/s/AKfycbygkyngE_dTXB1mwHkCWMEDVRFhEPO07j0TsKS1ESRpn42gjQQU2IkEVST7fJb0gey_Zg/exec';
+            const [submitStatus, setSubmitStatus] = useState('idle');
+            const [pdfStatus, setPdfStatus] = useState('');
+            const [language, setLanguage] = useState('ms');
+            
+            const [currentExaminer, setCurrentExaminer] = useState('');
+
+            const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'alert', onConfirm: null, isSuccess: false });
+
+            const [roster, setRoster] = useState(defaultRoster);
+
+            const currentRubrics = rubricsData[syllabus];
+
+            const isFoundation = syllabus === 'foundation';
+            const readingCombined = isFoundation 
+                ? Number(scores.readingPron) + Number(scores.readingFluency)
+                : Number(scores.readingPron) + Number(scores.readingFluency);
+            
+            const convTotal = Number(scores.convResponse) + Number(scores.convLanguage);
+            const grandTotal = readingCombined + convTotal;
+
+            const maxReading = 30;
+            const maxConv = isFoundation ? 40 : 30;
+            const maxTotal = isFoundation ? 70 : 60;
+
+            const generatedReadingFeedback = useMemo(() => {
+                let fb = [];
+                if (selections.readingPron !== null) fb.push(currentRubrics.readingPron.items[selections.readingPron].feedback);
+                if (selections.readingFluency !== null) fb.push(currentRubrics.readingFluency.items[selections.readingFluency].feedback);
+                return fb.join(" ");
+            }, [selections, currentRubrics]);
+
+            const generatedConvFeedback = useMemo(() => {
+                let fb = [];
+                if (selections.convResponse !== null) fb.push(currentRubrics.convResponse.items[selections.convResponse].feedback);
+                if (selections.convLanguage !== null) fb.push(currentRubrics.convLanguage.items[selections.convLanguage].feedback);
+                return fb.join(" ");
+            }, [selections, currentRubrics]);
+
+            const generatedFeedback = useMemo(() => {
+                let parts = [];
+                if (generatedReadingFeedback) parts.push(`【Bacaan Lantang】\n${generatedReadingFeedback}`);
+                if (generatedConvFeedback) parts.push(`【Perbualan】\n${generatedConvFeedback}`);
+                return parts.join("\n\n");
+            }, [generatedReadingFeedback, generatedConvFeedback]);
+
+            useEffect(() => {
+                setFeedbackText((currentText) => {
+                    if (!currentText || currentText === lastAutoText) {
+                        return generatedFeedback;
+                    }
+                    if (lastAutoText && currentText.includes(lastAutoText)) {
+                        return currentText.replace(lastAutoText, generatedFeedback);
+                    }
+                    return generatedFeedback;
+                });
+                setLastAutoText(generatedFeedback);
+            }, [generatedFeedback]);
+
+            const handleSyllabusChange = (newSyllabus) => {
+                if (newSyllabus === syllabus) return;
+
+                const switchAction = () => {
+                    setSyllabus(newSyllabus);
+                    clearScores();
+                    setStudent({ class: '', name: '', mtl: '' });
+                };
+
+                const hasScores = Object.values(scores).some(val => val > 0);
+                if (hasScores) {
+                    setDialog({
+                        isOpen: true,
+                        title: 'Tukar Rubrik Penilaian',
+                        message: 'Tukar kategori penilaian akan mengosongkan markah dan maklum balas semasa. Adakah anda ingin meneruskan?',
+                        type: 'confirm',
+                        onConfirm: switchAction
+                    });
+                } else {
+                    switchAction();
+                }
+            };
+
+            const clearScores = () => {
+                setScores({ readingPron: 0, readingFluency: 0, convResponse: 0, convLanguage: 0 });
+                setSelections({ readingPron: null, readingFluency: null, convResponse: null, convLanguage: null });
+                setFeedbackText('');
+            };
+
+            const handleSelect = (category, itemIndex, selectedScore) => {
+                setSelections(prev => ({ ...prev, [category]: itemIndex }));
+                setScores(prev => ({ ...prev, [category]: selectedScore }));
+            };
+
+            const handleScoreChange = (category, value) => {
+                let num = parseInt(value) || 0;
+                if (num > currentRubrics[category].max) num = currentRubrics[category].max;
+                setScores(prev => ({ ...prev, [category]: num }));
+                setSelections(prev => ({ ...prev, [category]: null })); 
+            };
+
+            const handleExaminerChange = (e) => {
+                const val = e.target.value;
+                setCurrentExaminer(val);
+                localStorage.setItem('oralExamExaminer', val);
+            };
+
+            const handleSavePDF = async () => {
+                const element = document.querySelector('.print-container');
+                if (!element) return;
+                const fileName = student.name ? `${student.class}_${student.name}_Oral_Feedback.pdf` : `Oral_Feedback_${student.class || 'Class'}.pdf`;
+                const previousDisplay = element.style.display;
+                const previousWidth = element.style.width;
+                element.style.display = 'block';
+                element.style.width = '190mm';
+                const options = { margin:[10,10,10,10], filename:fileName, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}, pagebreak:{mode:['avoid-all','css','legacy']} };
+                try {
+                    setPdfStatus(language === 'en' ? 'Generating PDF…' : 'Sedang menjana PDF…');
+                    const worker = html2pdf().set(options).from(element).toPdf();
+                    const pdfBlob = await worker.outputPdf('blob');
+                    if ('showSaveFilePicker' in window) {
+                        try {
+                            const fileHandle = await window.showSaveFilePicker({ suggestedName:fileName, types:[{description:'PDF Document',accept:{'application/pdf':['.pdf']}}] });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(pdfBlob); await writable.close();
+                            setPdfStatus(language === 'en' ? '✓ PDF saved' : '✓ PDF disimpan');
+                        } catch (saveError) { if (saveError && saveError.name !== 'AbortError') throw saveError; }
+                    } else {
+                        const url = URL.createObjectURL(pdfBlob);
+                        const pdfWindow = window.open(url, '_blank');
+                        if (!pdfWindow) setDialog({isOpen:true,title: language === 'en' ? 'PDF Ready' : 'PDF Sedia',message: language === 'en' ? 'Please allow pop-ups so the PDF can open in a new tab.' : 'Sila benarkan pop-up supaya PDF boleh dibuka dalam tab baharu.',type:'alert'});
+                        setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    }
+                    setTimeout(() => setPdfStatus(''),2500);
+                } catch(error) {
+                    console.error('PDF save error:',error);
+                    setDialog({isOpen:true,title: language === 'en' ? 'Unable to Save PDF' : 'Tidak Dapat Menyimpan PDF',message: language === 'en' ? 'The PDF could not be generated. Please try again.' : 'PDF tidak dapat dijana. Sila cuba lagi.',type:'alert'});
+                } finally { element.style.display=previousDisplay; element.style.width=previousWidth; }
+            };
+
+            const availableClasses = useMemo(() => {
+                const classes = new Set(roster.filter(s => s.subjectType === syllabus).map(s => s.class));
+                return Array.from(classes).sort();
+            }, [roster, syllabus]);
+
+            const filteredStudents = useMemo(() => {
+                if (!student.class) return [];
+                return roster.filter(s => s.subjectType === syllabus && s.class === student.class);
+            }, [roster, syllabus, student.class]);
+
+            const handleClassChange = (e) => {
+                const newClass = e.target.value;
+                setStudent({ class: newClass, name: '', mtl: '' });
+            };
+
+            const handleStudentSelect = (e) => {
+                const selectedName = e.target.value;
+                const found = roster.find(s => s.name === selectedName && s.class === student.class && s.subjectType === syllabus);
+                if (found) {
+                    setStudent(found);
+                } else {
+                    setStudent({ ...student, name: selectedName, mtl: '' });
+                }
+            };
+
+            const handleSubmitGAS = async () => {
+                if (!student.name || !currentExaminer) {
+                    setDialog({ isOpen: true, title: 'Peringatan', message: 'Sila pastikan nama murid telah dipilih dan Guru Penguji Lisan telah ditetapkan.', type: 'alert' });
+                    return;
+                }
+
+                setSubmitStatus('loading');
+                
+                const payload = {
+                    className: student.class,
+                    indexNo: '',
+                    studentName: student.name,
+                    examiner: currentExaminer,
+                    mtl: student.mtl,
+                    syllabus: syllabus === 'standard' ? 'Bahasa Melayu Standard' : 'Bahasa Melayu Asas',
+                    
+                    // 4 Individual Sub-component Scores
+                    readingPronScore: scores.readingPron,       // Sebutan & Kejelasan
+                    readingFluencyScore: scores.readingFluency,   // Kelancaran & Gaya
+                    readingCombinedScore: readingCombined,       // Bacaan Subtotal (/15 for Foundation, /20 for Standard)
+                    
+                    convResponseScore: scores.convResponse,       // Respons Peribadi & Pengembangan Idea
+                    convLanguageScore: scores.convLanguage,       // Penggunaan Bahasa & Kelancaran
+                    convCombinedScore: convTotal,                 // Perbualan Subtotal (/40 for Foundation, /30 for Standard)
+                    
+                    totalScore: grandTotal,                       // {language === 'en' ? 'Total Score' : 'Jumlah Markah'} (/55 for Foundation, /50 for Standard)
+                    maxTotal: maxTotal,
+                    feedback: feedbackText,
+                    timestamp: new Date().toLocaleString('en-SG', { hour12: false })
+                };
+
+                try {
+                    const response = await fetch(gasUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    setSubmitStatus('idle');
+                    setDialog({ 
+                        isOpen: true, 
+                        title: '✅ Penghantaran Berjaya!', 
+                        message: `Markah untuk ${student.name} telah berjaya disimpan ke pangkalan data awan (cloud).`, 
+                        type: 'alert',
+                        isSuccess: true 
+                    });
+                } catch (error) {
+                    setSubmitStatus('idle');
+                    setDialog({ isOpen: true, title: 'Penghantaran Gagal', message: 'Ralat rangkaian, sila cuba lagi.', type: 'alert' });
+                }
+            };
+
+            const resetForm = () => {
+                setDialog({
+                    isOpen: true,
+                    title: 'Sahkan Kosongkan Borang',
+                    message: 'Adakah anda pasti mahu mengosongkan markah semasa untuk menilai murid seterusnya?',
+                    type: 'confirm',
+                    onConfirm: () => {
+                        setStudent(prev => ({ ...prev, name: '', mtl: '' }));
+                        clearScores();
+                    }
+                });
+            }
+
+            const translations = {
+                "Sebutan & Kejelasan":"Pronunciation & Clarity", "Kelancaran & Gaya":"Fluency & Expression",
+                "Respons Peribadi & Pengembangan Idea":"Personal Response & Development of Ideas", "Penggunaan Bahasa & Kelancaran":"Language Use & Fluency",
+                "Sebutan sentiasa baik dan jelas":"Pronunciation is consistently good and clear",
+                "Sebutan jelas tetapi terdapat sedikit kesilapan":"Pronunciation is clear with a few errors",
+                "Pada umumnya, sebutan jelas tetapi terdapat banyak kesilapan":"Pronunciation is generally clear but contains many errors",
+                "Sebutan agak sukar difahami dan terdapat banyak kesilapan yang ketara":"Pronunciation is somewhat difficult to understand with many noticeable errors",
+                "Sebutan tidak jelas dan kebanyakan perkataan disalah sebut":"Pronunciation is unclear and most words are mispronounced",
+                "Bacaan amat lancar; jeda dan rentak sesuai dan tidak teragak-agak; variasi nada sesuai":"Reading is very fluent; pauses and rhythm are appropriate with no hesitation; suitable variation in tone",
+                "Bacaan lancar; pada umumnya, jeda dan rentak sesuai dan hampir tidak teragak-agak; variasi nada sesuai":"Reading is fluent; pauses and rhythm are generally appropriate with almost no hesitation; suitable variation in tone",
+                "Pada umumnya, bacaan lancar; jeda dan rentak sesuai tetapi teragak-agak sedikit; variasi nada memuaskan":"Reading is generally fluent; pauses and rhythm are appropriate with slight hesitation; satisfactory variation in tone",
+                "Pada umumnya, bacaan teragak-agak; jeda dan rentak tidak sesuai; terdapat sedikit variasi nada":"Reading is generally hesitant; pauses and rhythm are inappropriate; limited variation in tone",
+                "Bacaan teragak-agak dan banyak perkataan tidak dibaca; jeda dan rentak tidak sesuai; tiada variasi nada":"Reading is hesitant and many words are omitted; pauses and rhythm are inappropriate; no variation in tone",
+                "Bacaan teragak-agak dan banyak perkataan tidak dibaca; jeda dan rentak amat tidak sesuai; tiada variasi nada":"Reading is hesitant and many words are omitted; pauses and rhythm are highly inappropriate; no variation in tone",
+                "Memerlukan bantuan yang minimal; mampu memberikan respons komprehensif berserta pengembangan yang cukup; melibatkan diri dalam perbualan dan bertukar-tukar idea secara konsisten":"Requires minimal prompting; able to give comprehensive responses with sufficient development",
+                "Sekali-sekala memerlukan bantuan; mampu memberikan respons yang komprehensif berserta sedikit pengembangan; kebanyakan masa melibatkan diri dalam perbualan dan bertukar-tukar idea":"Occasionally requires prompting; able to give comprehensive responses with some development",
+                "Sering memerlukan bantuan; mampu memberikan respons yang cukup berserta sedikit pengembangan; sekali-sekala melibatkan diri dalam perbualan dan bertukar-tukar idea":"Frequently requires prompting; able to give adequate responses with some development",
+                "Sentiasa memerlukan bantuan; mampu memberikan sedikit respons tanpa pengembangan; hampir tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea":"Consistently requires prompting; able to give limited responses without development",
+                "Sentiasa memerlukan bantuan; hampir tidak mampu memberikan respons; tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea":"Consistently requires prompting; hardly able to give a response",
+                "Menggunakan pelbagai kosa kata yang sesuai; mampu bertutur dengan lancar dan jelas":"Engages consistently; uses a range of appropriate vocabulary; speaks fluently and clearly",
+                "Kebanyakan masa menggunakan kosa kata yang sesuai; pada umumnya mampu bertutur dengan lancar dan jelas":"Engages most of the time; uses a range of appropriate vocabulary; able to speak fluently and clearly",
+                "Menggunakan kosa kata asas yang kadangkala tidak sesuai; pada umumnya mampu bertutur dengan lancar dan jelas tetapi menggunakan pernyataan yang mudah-mudah":"Engages occasionally; uses basic vocabulary that may sometimes be inappropriate; uses simple statements",
+                "Menggunakan kosa kata asas yang kadangkala tidak sesuai; pada umumnya mampu bertutur dengan lancar dan jelas tetapi menggunakan pernyataan yang mudah-mudah-mudah":"Engages occasionally; uses basic vocabulary that may sometimes be inappropriate; uses simple statements",
+                "Kebanyakan masa menggunakan kosa kata asas yang tidak sesuai; tidak mampu bertutur dengan jelas; teragak-agak sedikit ketika bertutur":"Hardly able to engage; uses inappropriate basic vocabulary; unable to speak clearly and shows some hesitation",
+                "Menggunakan kosa kata asas yang amat terbatas hampir pada setiap masa; tidak mampu bertutur dengan jelas; teragak-agak ketika bertutur; berjeda agak lama di tempat yang tidak sesuai beberapa kali":"Unable to engage; vocabulary is very limited most of the time; unable to speak clearly and pauses for long periods",
+                "Memerlukan bantuan yang minimal; mampu memberikan respons komprehensif berserta pengembangan yang cukup; melibatkan diri dalam perbualan dan bertukar-tukar idea secara konsisten":"Requires minimal prompting; gives comprehensive responses with sufficient development; engages consistently in conversation and exchange of ideas",
+                "Sekali-sekala memerlukan bantuan; mampu memberikan respons yang komprehensif berserta sedikit pengembangan; kebanyakan masa melibatkan diri dalam perbualan dan bertukar-tukar idea":"Occasionally requires prompting; gives comprehensive responses with some development; engages in conversation and exchange of ideas most of the time",
+                "Sering memerlukan bantuan; mampu memberikan respons yang cukup berserta sedikit pengembangan; sekali-sekala melibatkan diri dalam perbualan dan bertukar-tukar idea":"Frequently requires prompting; gives adequate responses with some development; occasionally engages in conversation and exchange of ideas",
+                "Sentiasa memerlukan bantuan; mampu memberikan sedikit respons tanpa pengembangan; hampir tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea":"Consistently requires prompting; gives limited responses without development; hardly engages in conversation or exchange of ideas",
+                "Sentiasa memerlukan bantuan; hampir tidak mampu memberikan respons; tidak mampu melibatkan diri dalam perbualan dan bertukar-tukar idea":"Consistently requires prompting; hardly able to respond; unable to engage in conversation or exchange of ideas",
+                "Menggunakan pelbagai kosa kata yang sesuai; mampu bertutur dengan lancar dan jelas":"Uses a range of appropriate vocabulary; speaks fluently and clearly",
+                "Kebanyakan masa menggunakan kosa kata yang sesuai; pada umumnya mampu bertutur dengan lancar dan jelas":"Uses appropriate vocabulary most of the time; generally speaks fluently and clearly",
+                "Menggunakan kosa kata asas yang kadangkala tidak sesuai; pada umumnya mampu bertutur dengan lancar dan jelas tetapi menggunakan pernyataan yang mudah-mudah":"Uses basic vocabulary that is sometimes inappropriate; generally speaks fluently and clearly but uses simple statements",
+                "Kebanyakan masa menggunakan kosa kata asas yang tidak sesuai; tidak mampu bertutur dengan jelas; teragak-agak sedikit ketika bertutur":"Uses inappropriate basic vocabulary most of the time; unable to speak clearly; shows some hesitation",
+                "Menggunakan kosa kata asas yang amat terbatas hampir pada setiap masa; tidak mampu bertutur dengan jelas; teragak-agak ketika bertutur; berjeda agak lama di tempat yang tidak sesuai beberapa kali":"Uses very limited basic vocabulary most of the time; unable to speak clearly; hesitant and pauses for long periods at inappropriate points several times",
+            };
+            const tr = (text) => language === 'en' ? (translations[text] || text) : text;
+
+            const renderRubricRow = (categoryKey, rubricObj) => (
+                <div className="mb-10 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 no-print">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h3 className="font-bold text-xl md:text-2xl text-slate-800">
+                            {tr(rubricObj.title)} <span className="text-slate-400 text-lg font-medium">({rubricObj.max} {language === 'en' ? 'marks' : 'markah'})</span>
+                        </h3>
+                        <div className="flex items-center space-x-3 bg-blue-50 px-4 py-2 rounded-xl border border-blue-200 w-full md:w-auto justify-between md:justify-start">
+                            <span className="text-base md:text-lg text-blue-900 font-bold">{language === 'en' ? 'Score:' : 'Markah:'}</span>
+                            <div className="flex items-baseline">
+                                <input 
+                                    type="number" 
+                                    min="0" max={rubricObj.max}
+                                    value={scores[categoryKey]} 
+                                    onChange={(e) => handleScoreChange(categoryKey, e.target.value)}
+                                    className="w-16 text-center font-black text-2xl text-blue-700 bg-transparent border-b-2 border-blue-300 focus:outline-none focus:border-blue-700 transition-colors"
+                                />
+                                <span className="text-slate-500 font-medium ml-1">/{rubricObj.max}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {rubricObj.items.map((item, index) => {
+                            const isSelected = selections[categoryKey] === index;
+                            return (
+                                <div 
+                                    key={index}
+                                    onClick={() => handleSelect(categoryKey, index, item.scores[item.scores.length - 1])}
+                                    className={`cursor-pointer rounded-xl p-4 transition-all duration-200 border-2 flex flex-col ${
+                                        isSelected 
+                                        ? 'border-blue-600 bg-blue-50 shadow-md ring-4 ring-blue-100 scale-[1.02]' 
+                                        : 'border-slate-200 hover:border-blue-400 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {item.scores.map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleSelect(categoryKey, index, s);
+                                                }}
+                                                className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center text-sm md:text-base font-black transition-all ${
+                                                    isSelected && scores[categoryKey] === s 
+                                                    ? 'bg-blue-600 text-white shadow-lg scale-110' 
+                                                    : 'bg-white border-2 border-slate-300 text-slate-600 hover:bg-blue-100 hover:text-blue-800 hover:border-blue-400'
+                                                }`}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className={`font-bold text-lg mb-2 ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>
+                                        {language === 'en' ? item.label.replace('Jalur', 'Band') : item.label}
+                                    </div>
+                                    <div className={`text-sm leading-relaxed flex-grow ${isSelected ? 'text-blue-900/80 font-medium' : 'text-slate-500'}`}>
+                                        {tr(item.desc)}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+                    
+                    {/* Modal Dialogs */}
+                    {dialog.isOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 no-print">
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all border border-slate-200">
+                                <div className={`p-10 ${dialog.isSuccess ? 'bg-green-50 text-center' : ''}`}>
+                                    {dialog.isSuccess && <div className="text-7xl mb-6">🎉</div>}
+                                    <h3 className={`font-black text-3xl mb-4 ${dialog.isSuccess ? 'text-green-800' : 'text-slate-900'}`}>
+                                        {dialog.title || 'Peringatan'}
+                                    </h3>
+                                    <p className={`leading-relaxed text-xl ${dialog.isSuccess ? 'text-green-900 font-medium' : 'text-slate-600'}`}>
+                                        {dialog.message}
+                                    </p>
+                                </div>
+                                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-center space-x-4">
+                                    {dialog.type === 'confirm' && (
+                                        <button 
+                                            onClick={() => setDialog({ ...dialog, isOpen: false })} 
+                                            className="px-8 py-4 text-slate-600 font-bold text-lg hover:bg-slate-200 rounded-xl transition-colors w-full"
+                                        >
+                                            Batal
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => { 
+                                            if(dialog.onConfirm) dialog.onConfirm(); 
+                                            setDialog({ ...dialog, isOpen: false, isSuccess: false }); 
+                                        }} 
+                                        className={`px-8 py-4 text-white font-black text-lg rounded-xl shadow-lg transition-colors w-full ${dialog.isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    >
+                                        Faham
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Navigasi Atas & Bar Maklumat */}
+                    <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl shadow-md border-b border-slate-200 rounded-b-3xl p-4 lg:p-5 mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center no-print gap-4 transition-all">
+                        
+                        <div className="flex flex-col space-y-4 w-full xl:w-auto">
+                            {/* Tajuk Aplikasi & Pilihan Kurikulum */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                <span className="text-2xl font-black bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent drop-shadow-sm whitespace-nowrap">{language === 'en' ? 'Alexandra Primary 5 Malay Language Oral Assessment (2026)' : 'Alexandra Pemarkahan Lisan Bahasa Melayu Darjah 5 (2026)'}</span>
+                                
+                                <button onClick={() => setLanguage(language === 'en' ? 'ms' : 'en')} className="px-4 py-1.5 rounded-lg font-bold text-sm bg-amber-50 border border-amber-200 text-amber-800 shadow-sm">🌐 {language === 'en' ? 'Translate to Malay' : 'Tukar ke English'}</button>
+                                <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                                    <button
+                                        onClick={() => handleSyllabusChange('standard')}
+                                        className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${syllabus === 'standard' ? 'bg-slate-100 text-blue-700 shadow-inner' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Standard
+                                    </button>
+                                    <button
+                                        onClick={() => handleSyllabusChange('foundation')}
+                                        className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${syllabus === 'foundation' ? 'bg-slate-100 text-emerald-700 shadow-inner' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Asas
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Pilihan Murid & Guru Penguji */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <select 
+                                    value={student.class} 
+                                    onChange={handleClassChange}
+                                    className="border-2 border-slate-200 rounded-xl px-3 py-2 bg-white focus:ring-4 focus:ring-blue-500/20 outline-none font-bold text-slate-800 cursor-pointer shadow-sm"
+                                >
+                                    <option value="">{language === 'en' ? '- Select Class -' : '- Pilih Kelas -'}</option>
+                                    {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                                
+                                <select 
+                                    value={student.name} 
+                                    onChange={handleStudentSelect}
+                                    disabled={!student.class}
+                                    className="w-40 md:w-56 border-2 border-slate-200 rounded-xl px-3 py-2 bg-white focus:ring-4 focus:ring-blue-500/20 outline-none font-bold text-blue-700 shadow-sm cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                >
+                                    <option value="">{language === 'en' ? '- Select Student -' : '- Pilih Murid -'}</option>
+                                    {filteredStudents.map((s, i) => <option key={i} value={s.name}>{s.name}</option>)}
+                                </select>
+
+                                <div className="flex items-center space-x-2 md:border-l-2 md:border-slate-200 md:pl-4">
+                                    <select 
+                                        value={currentExaminer}
+                                        onChange={handleExaminerChange}
+                                        className="border-2 border-purple-200 rounded-xl px-3 py-2 bg-purple-50 focus:ring-4 focus:ring-purple-500/20 outline-none font-bold text-purple-800 shadow-sm cursor-pointer"
+                                    >
+                                        <option value="">{language === 'en' ? '- Oral Examiner -' : '- Guru Penguji -'}</option>
+                                        {examinersList.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                                
+                                {student.mtl && (
+                                    <span className="bg-white text-slate-600 text-xs px-2 py-1 rounded-md border border-slate-200 font-bold shadow-sm">
+                                        MTL: {student.mtl}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Ringkasan Markah Langsung */}
+                        <div className="flex items-center justify-end space-x-4 md:space-x-6 w-full xl:w-auto bg-white/50 xl:bg-transparent p-3 xl:p-0 rounded-2xl xl:rounded-none">
+                            <div className="text-center">
+                                <div className="text-xs text-slate-500 font-bold mb-1">{language === 'en' ? 'Reading Subtotal' : 'Subtotal Bacaan'}</div>
+                                <div className="font-black text-xl text-indigo-600">{readingCombined}<span className="text-sm text-slate-400 font-medium">/{maxReading}</span></div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-xs text-slate-500 font-bold mb-1">{language === 'en' ? 'Conversation Subtotal' : 'Subtotal Perbualan'}</div>
+                                <div className="font-black text-xl text-indigo-600">{convTotal}<span className="text-sm text-slate-400 font-medium">/{maxConv}</span></div>
+                            </div>
+                            <div className={`text-center px-6 py-2 rounded-2xl shadow-md transition-colors ${syllabus === 'foundation' ? 'bg-emerald-600' : 'bg-blue-600'} text-white`}>
+                                <div className="text-xs font-bold opacity-90 mb-1">{language === 'en' ? 'Total Score' : 'Jumlah Markah'}</div>
+                                <div className="font-black text-3xl leading-none">{grandTotal}<span className="text-sm font-medium opacity-80 ml-1">/{maxTotal}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Paparan Cetak Sahaja */}
+                    <div className="print-only print-container">
+                        <div className="text-center mb-6 border-b-2 border-slate-200 pb-6">
+                            <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-wide">🌟 Borang Maklum Balas Lisan Bahasa Melayu 🌟</h1>
+                            <p className="text-slate-500 mb-4 text-lg">({syllabus === 'standard' ? 'Bahasa Melayu Standard' : 'Bahasa Melayu Asas'})</p>
+                            <div className="flex justify-center flex-wrap gap-6 text-lg text-slate-700 font-medium">
+                                <span>Kelas: <strong className="text-slate-900 font-black">{student.class || "Tiada"}</strong></span>
+                                <span>Nama: <strong className="text-slate-900 font-black">{student.name || "Tiada Nama"}</strong></span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-center items-center gap-4 mb-8">
+                            <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 w-36 text-center">
+                                <div className="text-slate-600 font-bold text-sm mb-1">Bacaan</div>
+                                <div className="text-2xl font-black text-slate-800">{readingCombined} <span className="text-base font-normal text-slate-400">/ {maxReading}</span></div>
+                            </div>
+                            <div className="text-2xl text-slate-300 font-light">+</div>
+                            <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 w-36 text-center">
+                                <div className="text-slate-600 font-bold text-sm mb-1">Perbualan</div>
+                                <div className="text-2xl font-black text-slate-800">{convTotal} <span className="text-base font-normal text-slate-400">/ {maxConv}</span></div>
+                            </div>
+                            <div className="text-2xl text-slate-300 font-light">=</div>
+                            <div className={`border-4 rounded-2xl p-5 w-44 text-center shadow-sm ${syllabus === 'foundation' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+                                <div className={`font-bold text-sm mb-1 ${syllabus === 'foundation' ? 'text-emerald-700' : 'text-blue-700'}`}>{language === 'en' ? 'Total Score' : 'Jumlah Markah'}</div>
+                                <div className={`text-4xl font-black ${syllabus === 'foundation' ? 'text-emerald-800' : 'text-blue-800'}`}>{grandTotal} <span className={`text-lg ${syllabus === 'foundation' ? 'text-emerald-400' : 'text-blue-400'}`}>/ {maxTotal}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <h2 className="text-xl font-black text-slate-900 mb-4 flex items-center">
+                                <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-lg ${syllabus === 'foundation' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>💡</span> 
+                                Maklum Balas Guru:
+                            </h2>
+                            <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 text-lg text-slate-800 leading-loose font-medium text-justify whitespace-pre-wrap min-h-[150px]">
+                                {feedbackText || "Guru belum melengkapkan penilaian."}
+                            </div>
+                        </div>
+                        
+                        <div className="text-center mt-10 text-slate-500 font-black text-lg tracking-widest">
+                            Terus berusaha! Cikgu nantikan kejayaan kamu! 🚀
+                        </div>
+                    </div>
+
+                    {/* Bahagian Rubrik Interaktif */}
+                    <div className="no-print">
+                        <div className="mb-12">
+                            <h2 className={`text-2xl font-black text-slate-800 mb-6 px-4 border-l-8 rounded-sm ${syllabus === 'foundation' ? 'border-emerald-500' : 'border-blue-600'}`}>
+                                {language === 'en' ? 'Section 1: Reading Aloud (30 marks)' : 'Bahagian 1: Bacaan Lantang (30 markah)'}
+                            </h2>
+                            {renderRubricRow('readingPron', currentRubrics.readingPron)}
+                            {renderRubricRow('readingFluency', currentRubrics.readingFluency)}
+                        </div>
+
+                        <div className="mb-12">
+                            <h2 className={`text-2xl font-black text-slate-800 mb-6 px-4 border-l-8 rounded-sm ${syllabus === 'foundation' ? 'border-emerald-500' : 'border-green-500'}`}>
+                                {language === 'en' ? `Section 2: Conversation (${maxConv} marks)` : `Bahagian 2: Perbualan (${maxConv} markah)`}
+                            </h2>
+                            {renderRubricRow('convResponse', currentRubrics.convResponse)}
+                            {renderRubricRow('convLanguage', currentRubrics.convLanguage)}
+                        </div>
+
+                        {/* Bahagian Penyunting Maklum Balas */}
+                        <div className={`mt-12 p-6 md:p-8 rounded-3xl border-2 shadow-sm ${syllabus === 'foundation' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-blue-50/50 border-blue-100'}`}>
+                            <h3 className={`font-black text-xl md:text-2xl mb-4 flex items-center ${syllabus === 'foundation' ? 'text-emerald-900' : 'text-blue-900'}`}>
+                                {language === 'en' ? '📝 Auto-Generated Feedback Preview' : '📝 Pratinjau Maklum Balas Jana-Automatik'} 
+                                <span className={`text-sm font-normal ml-3 px-3 py-1 rounded-full ${syllabus === 'foundation' ? 'text-emerald-600 bg-emerald-100' : 'text-blue-600 bg-blue-100'}`}>
+                                    {language === 'en' ? '(Click in the text box to edit or add notes freely)' : '(Klik di dalam kotak teks untuk mengubah atau menambah nota secara bebas)'}
+                                </span>
+                            </h3>
+                            <textarea 
+                                className={`w-full h-48 md:h-64 p-6 rounded-2xl border-2 focus:ring-4 outline-none resize-none text-slate-800 text-lg leading-relaxed text-justify shadow-inner bg-white ${syllabus === 'foundation' ? 'border-emerald-200 focus:ring-emerald-500/20 focus:border-emerald-500' : 'border-blue-200 focus:ring-blue-500/20 focus:border-blue-500'}`}
+                                value={feedbackText}
+                                onChange={(e) => setFeedbackText(e.target.value)}
+                                placeholder="Klik pada jadual rubrik di atas untuk menjana maklum balas secara automatik. Anda juga boleh memasukkan nota khusus terus di sini..."
+                            ></textarea>
+                            
+                            <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4 pt-6 border-t border-slate-200/60">
+                                <button 
+                                    onClick={resetForm} 
+                                    className="flex items-center text-slate-600 bg-white hover:bg-slate-100 border-2 border-slate-200 font-bold text-base px-6 py-3 rounded-xl transition-all order-2 md:order-1 shadow-sm"
+                                >
+                                    {language === 'en' ? '🔄 Clear Form' : '🔄 Kosongkan Borang'} 
+                                </button>
+                                
+                                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full md:w-auto order-1 md:order-2">
+                                    <button 
+                                        onClick={handleSavePDF}
+                                        className="justify-center bg-white border-2 border-slate-300 hover:border-slate-400 text-slate-800 px-6 py-3 rounded-xl font-bold text-base shadow-sm flex items-center transition-all"
+                                    >
+                                        {language === 'en' ? '💾 Save PDF' : '💾 Simpan PDF'}
+                                    </button>
+                                    {pdfStatus && <span className="text-sm font-bold text-green-700 self-center">{pdfStatus}</span>}
+                                    <button 
+                                        onClick={handleSubmitGAS}
+                                        disabled={submitStatus === 'loading'}
+                                        className={`justify-center text-white px-8 py-3 rounded-xl font-bold text-base shadow-md flex items-center transition-all transform hover:-translate-y-0.5 ${
+                                            submitStatus === 'loading' 
+                                            ? 'bg-indigo-400' 
+                                            : (syllabus === 'foundation' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700')
+                                        }`}
+                                    >
+                                        {submitStatus === 'loading' ? '☁️ Menghantar...' : '☁️ Hantar ke Cloud'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
