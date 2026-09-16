@@ -308,21 +308,21 @@
                 const options = { margin:[10,10,10,10], filename:fileName, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}, pagebreak:{mode:['avoid-all','css','legacy']} };
                 try {
                     setPdfStatus(language === 'en' ? 'Generating PDF…' : 'Sedang menjana PDF…');
+                    // Open a blank tab immediately from the user's click so popup blockers do not treat it as an automatic popup.
+                    const pdfWindow = window.open('', '_blank');
+                    if (!pdfWindow) {
+                        setDialog({isOpen:true,title: language === 'en' ? 'Pop-up Blocked' : 'Pop-up Disekat',message: language === 'en' ? 'Please allow pop-ups for this app, then click Save PDF again.' : 'Sila benarkan pop-up untuk aplikasi ini, kemudian klik Simpan PDF sekali lagi.',type:'alert'});
+                        return;
+                    }
+                    pdfWindow.document.write(`<html><head><title>${fileName}</title></head><body style="font-family:Arial,sans-serif;padding:24px">${language === 'en' ? 'Generating PDF…' : 'Sedang menjana PDF…'}</body></html>`);
+
                     const worker = html2pdf().set(options).from(element).toPdf();
                     const pdfBlob = await worker.outputPdf('blob');
-                    if ('showSaveFilePicker' in window) {
-                        try {
-                            const fileHandle = await window.showSaveFilePicker({ suggestedName:fileName, types:[{description:'PDF Document',accept:{'application/pdf':['.pdf']}}] });
-                            const writable = await fileHandle.createWritable();
-                            await writable.write(pdfBlob); await writable.close();
-                            setPdfStatus(language === 'en' ? '✓ PDF saved' : '✓ PDF disimpan');
-                        } catch (saveError) { if (saveError && saveError.name !== 'AbortError') throw saveError; }
-                    } else {
-                        const url = URL.createObjectURL(pdfBlob);
-                        const pdfWindow = window.open(url, '_blank');
-                        if (!pdfWindow) setDialog({isOpen:true,title: language === 'en' ? 'PDF Ready' : 'PDF Sedia',message: language === 'en' ? 'Please allow pop-ups so the PDF can open in a new tab.' : 'Sila benarkan pop-up supaya PDF boleh dibuka dalam tab baharu.',type:'alert'});
-                        setTimeout(() => URL.revokeObjectURL(url), 60000);
-                    }
+                    const url = URL.createObjectURL(pdfBlob);
+                    pdfWindow.location.replace(url);
+                    setPdfStatus(language === 'en' ? '✓ PDF opened — use the Save icon' : '✓ PDF dibuka — gunakan ikon Simpan');
+                    // Keep the object URL alive long enough for the browser PDF viewer to load and save it.
+                    setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000);
                     setTimeout(() => setPdfStatus(''),2500);
                 } catch(error) {
                     console.error('PDF save error:',error);
