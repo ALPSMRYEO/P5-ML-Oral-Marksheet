@@ -392,55 +392,131 @@
                 }
             };
 
+            const buildPayload = () => ({
+                level: 'P5',
+                className: student.class,
+                indexNo: '',
+                studentName: student.name,
+                examiner: currentExaminer,
+                mtl: student.mtl,
+                syllabus: syllabus === 'standard' ? 'Bahasa Melayu Standard' : 'Bahasa Melayu Asas',
+                readingPronScore: scores.readingPron,
+                readingFluencyScore: scores.readingFluency,
+                readingCombinedScore: readingCombined,
+                convResponseScore: scores.convResponse,
+                convLanguageScore: scores.convLanguage,
+                convCombinedScore: convTotal,
+                totalScore: grandTotal,
+                maxTotal: maxTotal,
+                feedback: feedbackText,
+                timestamp: new Date().toLocaleString('en-SG', { hour12: false })
+            });
+
+            const submitAssessment = async () => {
+                setSubmitStatus('loading');
+                try {
+                    await fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(buildPayload())
+                    });
+
+                    const key = `P5|${student.mtl}|${student.name}`.toUpperCase();
+                    localStorage.setItem(`oralSubmitted:${key}`, JSON.stringify({
+                        examiner: currentExaminer,
+                        timestamp: new Date().toLocaleString('en-SG', { hour12: false })
+                    }));
+
+                    setSubmitStatus('idle');
+                    setDialog({
+                        isOpen: true,
+                        title: '✅ Berjaya Dihantar!',
+                        message: `Markah ${student.name} telah berjaya dihantar.`,
+                        type: 'alert',
+                        isSuccess: true
+                    });
+                } catch (error) {
+                    setSubmitStatus('idle');
+                    setDialog({
+                        isOpen: true,
+                        title: 'Penghantaran Gagal',
+                        message: 'Terdapat masalah rangkaian. Sila cuba lagi.',
+                        type: 'alert'
+                    });
+                }
+            };
+
+            const showDuplicateWarning = (previous) => {
+                const details = previous
+                    ? `\nGuru Penguji terdahulu: ${previous.examiner || 'Tiada rekod'}\nMasa penghantaran terdahulu: ${previous.timestamp || 'Tiada rekod'}`
+                    : '';
+
+                setDialog({
+                    isOpen: true,
+                    title: '⚠️ Markah Telah Dihantar',
+                    message: `Markah ${student.name} telah dihantar sebelum ini.${details}\n\nPilih “Batal” untuk kembali menyemak atau “Teruskan” untuk menghantar sekali lagi.`,
+                    type: 'confirm',
+                    onConfirm: () => {
+                        setDialog(d => ({ ...d, isOpen: false }));
+                        submitAssessment();
+                    }
+                });
+            };
+
             const handleSubmitGAS = async () => {
-                if (!student.name || !currentExaminer) {
-                    setDialog({ isOpen: true, title: 'Peringatan', message: 'Sila pastikan nama murid telah dipilih dan Guru Penguji Lisan telah ditetapkan.', type: 'alert' });
+                if (!student.name || !student.mtl || !currentExaminer) {
+                    setDialog({
+                        isOpen: true,
+                        title: 'Peringatan',
+                        message: 'Sila pastikan nama murid telah dipilih dan Guru Penguji Lisan telah ditetapkan.',
+                        type: 'alert'
+                    });
+                    return;
+                }
+
+                if (submitStatus === 'loading') return;
+
+                const key = `P5|${student.mtl}|${student.name}`.toUpperCase();
+                const localPrevious = localStorage.getItem(`oralSubmitted:${key}`);
+
+                if (localPrevious) {
+                    let previous = null;
+                    try { previous = JSON.parse(localPrevious); } catch (e) {}
+                    showDuplicateWarning(previous);
                     return;
                 }
 
                 setSubmitStatus('loading');
-                
-                const payload = {
-                    className: student.class,
-                    indexNo: '',
-                    studentName: student.name,
-                    examiner: currentExaminer,
-                    mtl: student.mtl,
-                    syllabus: syllabus === 'standard' ? 'Bahasa Melayu Standard' : 'Bahasa Melayu Asas',
-                    
-                    // 4 Individual Sub-component Scores
-                    readingPronScore: scores.readingPron,       // Sebutan & Kejelasan
-                    readingFluencyScore: scores.readingFluency,   // Kelancaran & Gaya
-                    readingCombinedScore: readingCombined,       // Bacaan Subtotal (/15 for Foundation, /20 for Standard)
-                    
-                    convResponseScore: scores.convResponse,       // Respons Peribadi & Pengembangan Idea
-                    convLanguageScore: scores.convLanguage,       // Penggunaan Bahasa & Kelancaran
-                    convCombinedScore: convTotal,                 // Perbualan Subtotal (/40 for Foundation, /30 for Standard)
-                    
-                    totalScore: grandTotal,                       // {language === 'en' ? 'Total Score' : 'Jumlah Markah'} (/55 for Foundation, /50 for Standard)
-                    maxTotal: maxTotal,
-                    feedback: feedbackText,
-                    timestamp: new Date().toLocaleString('en-SG', { hour12: false })
-                };
 
                 try {
-                    const response = await fetch(gasUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
+                    const checkUrl =
+                        `${gasUrl}?action=check&level=P5&mtClass=${encodeURIComponent(student.mtl)}` +
+                        `&studentName=${encodeURIComponent(student.name)}&_=${Date.now()}`;
+
+                    const response = await fetch(checkUrl, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        redirect: 'follow'
                     });
-                    
+                    const result = await response.json();
+
                     setSubmitStatus('idle');
-                    setDialog({ 
-                        isOpen: true, 
-                        title: '✅ Penghantaran Berjaya!', 
-                        message: `Markah untuk ${student.name} telah berjaya disimpan ke pangkalan data awan (cloud).`, 
-                        type: 'alert',
-                        isSuccess: true 
-                    });
+
+                    if (result && result.exists) {
+                        showDuplicateWarning(result.previous || null);
+                        return;
+                    }
+
+                    await submitAssessment();
                 } catch (error) {
                     setSubmitStatus('idle');
-                    setDialog({ isOpen: true, title: 'Penghantaran Gagal', message: 'Ralat rangkaian, sila cuba lagi.', type: 'alert' });
+                    setDialog({
+                        isOpen: true,
+                        title: 'Tidak Dapat Menyemak Penghantaran Terdahulu',
+                        message: 'Sistem tidak dapat menyemak Google Sheet untuk memastikan sama ada markah murid ini telah dihantar. Untuk mengelakkan rekod berganda, markah tidak dihantar kali ini. Sila semak sambungan internet atau deployment Apps Script dan cuba lagi.',
+                        type: 'alert'
+                    });
                 }
             };
 
