@@ -412,15 +412,31 @@
                 timestamp: new Date().toLocaleString('en-SG', { hour12: false })
             });
 
-            const submitAssessment = async () => {
+            const submitAssessment = async (forceDuplicate = false) => {
                 setSubmitStatus('loading');
                 try {
-                    await fetch(gasUrl, {
+                    const payload = {
+                        ...buildPayload(),
+                        forceDuplicate
+                    };
+
+                    const response = await fetch(gasUrl, {
                         method: 'POST',
-                        mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(buildPayload())
+                        body: JSON.stringify(payload)
                     });
+
+                    const result = await response.json();
+                    setSubmitStatus('idle');
+
+                    if (result && result.duplicate && result.saved === false) {
+                        showDuplicateWarning(result.previous || null);
+                        return;
+                    }
+
+                    if (!result || result.ok !== true || result.saved !== true) {
+                        throw new Error((result && result.error) || 'Submission was not confirmed.');
+                    }
 
                     const key = `P5|${student.mtl}|${student.name}`.toUpperCase();
                     localStorage.setItem(`oralSubmitted:${key}`, JSON.stringify({
@@ -428,7 +444,6 @@
                         timestamp: new Date().toLocaleString('en-SG', { hour12: false })
                     }));
 
-                    setSubmitStatus('idle');
                     setDialog({
                         isOpen: true,
                         title: '✅ Berjaya Dihantar!',
@@ -441,7 +456,7 @@
                     setDialog({
                         isOpen: true,
                         title: 'Penghantaran Gagal',
-                        message: 'Terdapat masalah rangkaian. Sila cuba lagi.',
+                        message: 'Sistem tidak dapat mengesahkan bahawa markah telah disimpan. Sila semak sambungan internet dan cuba lagi.',
                         type: 'alert'
                     });
                 }
@@ -511,12 +526,7 @@
                     await submitAssessment();
                 } catch (error) {
                     setSubmitStatus('idle');
-                    setDialog({
-                        isOpen: true,
-                        title: 'Tidak Dapat Menyemak Penghantaran Terdahulu',
-                        message: 'Sistem tidak dapat menyemak Google Sheet untuk memastikan sama ada markah murid ini telah dihantar. Untuk mengelakkan rekod berganda, markah tidak dihantar kali ini. Sila semak sambungan internet atau deployment Apps Script dan cuba lagi.',
-                        type: 'alert'
-                    });
+                    await submitAssessment(false);
                 }
             };
 
